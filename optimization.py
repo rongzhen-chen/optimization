@@ -50,10 +50,10 @@ def schedulecost(sol):
   
     return totalprice+totalwait
 
-def randomoptimize(domain,costf):
+def randomoptimize(domain,costf,maxiter):
     best = 999999999
     bestr = None
-    for i in range(10000):
+    for i in range(maxiter):
         # creat a random solution
         r = [random.randint(domain[i][0],domain[i][1]) for i in range(len(domain))]
         cost = costf(r)
@@ -196,6 +196,7 @@ def geneticoptimize(domain, costf, popsize=50, step=1, mutprob=0.2, elite=0.2, m
         return r1[0:i]+r2[i:]
 
     pop=[]
+    costV=[]
 
     for i in range(popsize):
         vec=[random.randint(domain[i][0],domain[i][1]) for i in range(len(domain))]
@@ -220,8 +221,8 @@ def geneticoptimize(domain, costf, popsize=50, step=1, mutprob=0.2, elite=0.2, m
                 c2=random.randint(0,topelite)
                 pop.append(crossover(ranked[c1],ranked[c2]))
 
-        #print scores[0][0]
-    return scores[0][1] 
+        costV.append(scores[0][0])
+    return scores[0][1],costV
 
 
 people=[('Seymour','BOS'),('Franny','DAL'),('Zooey','CAK'),('Walt','MIA'),('Buddy','ORD'),('Les','OMA')]
@@ -236,34 +237,111 @@ for line in file('schedule.txt'):
     flights[(origin, dest)].append((depart,arrive,int(price)))
 
 
-
-#s=[1,4,3,2,7,3,6,3,2,4,5,3]
 domain=[(0,9)]*(len(people)*2)
 print("domain={0}".format(domain))
-#s=randomoptimize(domain,schedulecost)
-print('-----------hillclimb----------')
-s=hillclimb(domain,schedulecost)
-print(s)
-print(schedulecost(s))
+'''
+#############################################################'
+s=[1,4,3,2,7,3,6,3,2,4,5,3]
+print('solution list:{}'.format(s))
+print('cost function returns:{}'.format(schedulecost(s)))
+print('-----------schdule---------')
 print(printschedule(s))
 
+#############################################################'
+print('-----------random optimization----------')
+listIter=[10,100,1000,10000,100000]
+list_ro=[]
+for ele in listIter:
+    s=randomoptimize(domain,schedulecost,ele)
+    list_ro.append(schedulecost(s))
+
+plt.plot(listIter,list_ro,'-o')
+plt.title('Random Optimization')
+plt.xlabel('Number of Iteration')
+plt.ylabel('Cost Function')
+plt.savefig('random_opt.png', bbox_inches='tight')
+
+#############################################################'
+print('-----------hillclimb----------')
+list_hc=[]
+for ele in range(100):
+    s=hillclimb(domain,schedulecost)
+    list_hc.append(schedulecost(s))
+
+x=np.linspace(1,100,100)
+plt.plot(x,list_hc,'-o')
+plt.title('Hill Climbing')
+plt.xlabel('Number of Execution')
+plt.ylabel('Cost Function')
+plt.savefig('hillclimb_opt.png', bbox_inches='tight')
+
+#############################################################'
 print('-----------randomhillclimb----------')
-s=randomhillclimb(domain,schedulecost,5)
-print(s)
-print(schedulecost(s))
-print(printschedule(s))
+list_rhc=[]
+for ele in range(100):
+    s=randomhillclimb(domain,schedulecost,5)
+    list_rhc.append(schedulecost(s))
+
+x=np.linspace(1,100,100)
+plt.plot(x,list_rhc,'-o')
+plt.title('random-restart Hill Climbing (5 times searching)')
+plt.xlabel('Number of Execution')
+plt.ylabel('Cost Function')
+plt.savefig('randomhillclimb_opt.png', bbox_inches='tight')
 
 #pltFigs()
 
+#############################################################'
 print('-----------annealing----------')
-s=annealingoptimize(domain,schedulecost,cool=0.95)
-print(s)
-print(schedulecost(s))
-print(printschedule(s))
+list_ann1=[]
+list_ann2=[]
+valueT=[1000.,5000.,10000.,50000.,100000.]
+valueC=[0.2,0.5,0.7,0.9,0.99]
+for i in range(len(valueT)):
+    s1=annealingoptimize(domain,schedulecost,T=valueT[i], cool=0.95)
+    s2=annealingoptimize(domain,schedulecost,T=10000.0, cool=valueC[i])
+    list_ann1.append(schedulecost(s1))
+    list_ann2.append(schedulecost(s2))
 
+plt.figure(1)
+plt.plot(valueT,list_ann1,'-o')
+plt.title('Annealing varying T, cool=0.95')
+plt.xlabel('Temperature (T)')
+plt.ylabel('Cost Function')
+plt.savefig('anneal_opt_varyingT.png', bbox_inches='tight')
 
+plt.figure(2)
+plt.plot(valueC,list_ann2,'-o')
+plt.title('Annealing varying Cool, T=10000')
+plt.xlabel('Cool rate (Cool)')
+plt.ylabel('Cost Function')
+plt.savefig('anneal_opt_varyingC.png', bbox_inches='tight')
+'''
+
+#############################################################'
 print('-----------genetic----------')
-s=geneticoptimize(domain,schedulecost)
-print(s)
-print(schedulecost(s))
-print(printschedule(s))
+
+numiter=100
+x=np.linspace(1,numiter,numiter)
+list_genopt=[]
+list_costV=[]
+for i in range(numiter):
+    s,costV=geneticoptimize(domain,schedulecost,maxiter=numiter)
+    list_genopt.append(schedulecost(s))
+    list_costV.append(costV)
+
+plt.figure(1)
+plt.plot(x,list_genopt,'-o')
+plt.title('Genetic Algorithm')
+plt.xlabel('Number of Execution')
+plt.ylabel('Cost Function')
+plt.savefig('gen_opt_1.png', bbox_inches='tight')
+
+plt.figure(2)
+for ele in list_costV:
+    plt.plot(x,ele,'-o')
+
+plt.title('Genetic Algorithm')
+plt.xlabel('Number of Iteration within the Algorithm')
+plt.ylabel('Cost Function')
+plt.savefig('gen_opt_2.png', bbox_inches='tight')
